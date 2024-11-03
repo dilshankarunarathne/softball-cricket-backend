@@ -38,4 +38,33 @@ router.get('/:id', async (req, res) => {
     res.send(match);
 });
 
+router.put('/:id', authMiddleware, async (req, res) => {
+    const { team1, team2, date, start_time, end_time, location } = req.body;
+    const token = req.headers.authorization.split(' ')[1];
+
+    try {
+        const decoded = jwt.verify(token, process.env.SECRET_KEY);
+        if (decoded.user_type !== 'admin') {
+            return res.status(403).send('Only admins can update matches');
+        }
+
+        const match = await Match.findById(req.params.id);
+        if (!match) {
+            return res.status(404).send('Match not found');
+        }
+
+        match.team1 = team1;
+        match.team2 = team2;
+        match.date = date;
+        match.start_time = start_time;
+        match.end_time = end_time;
+        match.location = location;
+        await match.save();
+
+        res.send('Match updated successfully');
+    } catch (error) {
+        res.status(500).send('Internal server error');
+    }
+});
+
 module.exports = router;
