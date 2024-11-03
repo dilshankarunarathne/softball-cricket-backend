@@ -30,6 +30,12 @@ router.get('/', async (req, res) => {
     res.send(teams);
 });
 
-
+router.get('/:id', async (req, res) => {
+    const team = await Team.findById(req.params.id);
+    if (!team) {
+        return res.status(404).send('Team not found');
+    }
+    res.send(team);
+});
 
 module.exports = router;
