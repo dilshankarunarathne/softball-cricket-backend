@@ -39,4 +39,18 @@ router.get('/profile', async (req, res) => {
   }
 });
 
+router.put('/profile', upload.none(), async (req, res) => {
+  const token = req.headers.authorization.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    const user = await User.findById(decoded._id);
+    // user.username = req.body.username;
+    // TOOD: handle user account details
+    await user.save();
+    res.send('account updated successfully');
+  } catch (error) {
+    res.sendStatus(403);
+  }
+});
+
 module.exports = router;
