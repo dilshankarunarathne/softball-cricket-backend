@@ -14,7 +14,7 @@ router.post('/signup', upload.none(), async (req, res) => {
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
-  const user = new User({ username, password: hashedPassword });
+  const user = new User({ username, password: hashedPassword, user_type: 'user' });
   await user.save();
   res.sendStatus(201);
 });
@@ -24,7 +24,7 @@ router.post('/login', upload.none(), async (req, res) => {
   if (!user || !await bcrypt.compare(req.body.password, user.password)) {
     return res.sendStatus(401);
   }
-  const token = jwt.sign({ _id: user._id }, process.env.SECRET_KEY);
+  const token = jwt.sign({ _id: user._id, user_type:user.user_type }, process.env.SECRET_KEY);
   res.send({ token });
 });
 
