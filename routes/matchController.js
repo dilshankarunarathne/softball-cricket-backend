@@ -30,4 +30,12 @@ router.get('/', async (req, res) => {
     res.send(matches);
 });
 
+router.get('/:id', async (req, res) => {
+    const match = await Match.findById(req.params.id);
+    if (!match) {
+        return res.status(404).send('Match not found');
+    }
+    res.send(match);
+});
+
 module.exports = router;
