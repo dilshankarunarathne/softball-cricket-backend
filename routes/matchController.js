@@ -67,4 +67,25 @@ router.put('/:id', authMiddleware, async (req, res) => {
     }
 });
 
+router.delete('/:id', authMiddleware, async (req, res) => {
+    const token = req.headers.authorization.split(' ')[1];
+
+    try {
+        const decoded = jwt.verify(token, process.env.SECRET_KEY);
+        if (decoded.user_type !== 'admin') {
+            return res.status(403).send('Only admins can delete matches');
+        }
+
+        const match = await Match.findById(req.params.id);
+        if (!match) {
+            return res.status(404).send('Match not found');
+        }
+
+        await match.remove();
+        res.send('Match deleted successfully');
+    } catch (error) {
+        res.status(500).send('Internal server error');
+    }
+});
+
 module.exports = router;
