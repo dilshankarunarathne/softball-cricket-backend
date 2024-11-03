@@ -28,4 +28,15 @@ router.post('/login', upload.none(), async (req, res) => {
   res.send({ token });
 });
 
+router.get('/profile', async (req, res) => {
+  const token = req.headers.authorization.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    const user = await User.findById(decoded._id);
+    res.send(user);
+  } catch (error) {
+    res.sendStatus(403);
+  }
+});
+
 module.exports = router;
