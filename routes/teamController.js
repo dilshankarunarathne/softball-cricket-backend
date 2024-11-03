@@ -25,4 +25,11 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 });
 
+router.get('/', async (req, res) => {
+    const teams = await Team.find();
+    res.send(teams);
+});
+
+
+
 module.exports = router;
