@@ -25,4 +25,9 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 });
 
+router.get('/', async (req, res) => {
+    const matches = await Match.find();
+    res.send(matches);
+});
+
 module.exports = router;
