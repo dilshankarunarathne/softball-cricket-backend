@@ -2,12 +2,12 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('./User');
+const User = require('../models/User');
 const multer = require('multer');
 const upload = multer();
 const authMiddleware = require('../middleware/authMiddleware');
 
-router.post('/change-user-type', authMiddleware, async (req, res) => {
+router.post('/change-user-type', authMiddleware, upload.none(), async (req, res) => {
   const { username, new_type } = req.body;
   const token = req.headers.authorization.split(' ')[1];
 
