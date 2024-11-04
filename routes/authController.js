@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('./User');
+const User = require('../models/User');
 const multer = require('multer');
 const upload = multer();
 
@@ -28,6 +28,7 @@ router.post('/login', upload.none(), async (req, res) => {
   res.send({ token });
 });
 
+// TODO: add more fields to the user model for profile
 router.get('/profile', async (req, res) => {
   const token = req.headers.authorization.split(' ')[1];
   try {
