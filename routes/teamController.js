@@ -8,7 +8,7 @@ const upload = multer();
 const authMiddleware = require('../middleware/authMiddleware');
 
 router.post('/', authMiddleware, upload.none(), async (req, res) => {
-    const { team_name } = req.body;
+    const { name } = req.body;
     const token = req.headers.authorization.split(' ')[1];
 
     try {
@@ -17,10 +17,11 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
             return res.status(403).send('Only admins can create teams');
         }
 
-        const team = new Team({ team_name });
+        const team = new Team({ name });
         await team.save();
         res.sendStatus(201);
     } catch (error) {
+        console.log(error);
         res.status(500).send('Internal server error');
     }
 });
@@ -39,7 +40,7 @@ router.get('/:id', async (req, res) => {
 });
 
 router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
-    const { team_name } = req.body;
+    const { name } = req.body;
     const token = req.headers.authorization.split(' ')[1];
 
     try {
@@ -53,7 +54,7 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
             return res.status(404).send('Team not found');
         }
 
-        team.team_name = team_name;
+        team.name = name;
         await team.save();
 
         res.send('Team updated successfully');
@@ -64,6 +65,8 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
 
 router.delete('/:id', authMiddleware, upload.none(), async (req, res) => {
     const token = req.headers.authorization.split(' ')[1];
+
+    console.log(req.params.id);
 
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
@@ -78,6 +81,7 @@ router.delete('/:id', authMiddleware, upload.none(), async (req, res) => {
 
         res.send('Team deleted successfully');
     } catch (error) {
+        console.log(error);
         res.status(500).send('Internal server error');
     }
 });
