@@ -78,14 +78,14 @@ router.delete('/:id', authMiddleware, upload.none(), async (req, res) => {
             return res.status(403).send('Only admins can delete matches');
         }
 
-        const match = await Match.findById(req.params.id);
+        const match = await Match.findByIdAndDelete(req.params.id);
         if (!match) {
             return res.status(404).send('Match not found');
         }
 
-        await match.remove();
         res.send('Match deleted successfully');
     } catch (error) {
+        console.log(error);
         res.status(500).send('Internal server error');
     }
 });
