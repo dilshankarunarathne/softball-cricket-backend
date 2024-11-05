@@ -66,8 +66,6 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
 router.delete('/:id', authMiddleware, upload.none(), async (req, res) => {
     const token = req.headers.authorization.split(' ')[1];
 
-    console.log(req.params.id);
-
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
         if (decoded.user_type !== 'admin') {
