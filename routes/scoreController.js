@@ -33,7 +33,7 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
         const match = await Match.findById(match_id);
         const bowler = await Player.findById(bowler_id);
 
-        parsedBalls.forEach(ball => {
+        parsedBalls.forEach(async ball => {
             if (ball.result === 'wicket') {
                 bowler.wickets_taken += 1;
                 if (match.team1 === bowler.team) {
