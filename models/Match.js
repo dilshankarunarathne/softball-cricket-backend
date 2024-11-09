@@ -11,6 +11,8 @@ const MatchSchema = new mongoose.Schema({
   // result fields
   team1_score: { type: Number, default: 0 },
   team2_score: { type: Number, default: 0 },
+  team1_wickets: { type: Number, default: 0 },
+  team2_wickets: { type: Number, default: 0 },
   winner: { type: String, default: '' },
   status: { type: String, default: 'pending' },
 
