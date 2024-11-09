@@ -67,4 +67,34 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
     }
 });
 
+router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
+    const { match_id, over_number, balls_per_over, bowler_id, balls } = req.body;
+    const token = req.headers.authorization.split(' ')[1];
+
+    try {
+        const decoded = jwt.verify(token, process.env.SECRET_KEY);
+        if (decoded.user_type !== 'temp-admin') {
+            return res.status(403).send('Only admins can update score details');
+        }
+
+        const score = await Score.findById(req.params.id);
+        if (!score) {
+            return res.status(404).send('Score not found');
+        }
+
+        score.match_id = match_id || score.match_id;
+        score.over_number = over_number || score.over_number;
+        score.balls_per_over = balls_per_over || score.balls_per_over;
+        score.bowler_id = bowler_id || score.bowler_id;
+        score.balls = balls ? JSON.parse(balls) : score.balls;
+
+        await score.save();
+
+        res.send('Score updated successfully');
+    } catch (error) {
+        console.log(error);
+        res.status(500).send('Internal server error');
+    }
+});
+
 module.exports = router;
