@@ -82,6 +82,38 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
             return res.status(404).send('Score not found');
         }
 
+        // Revert old statistics
+        const oldMatch = await Match.findById(score.match_id);
+        const oldBowler = await Player.findById(score.bowler_id);
+
+        score.balls.forEach(async ball => {
+            if (ball.result === 'wicket') {
+                oldBowler.wickets_taken -= 1;
+                if (oldMatch.team1 === oldBowler.team) {
+                    oldMatch.team2_wickets -= 1;
+                } else {
+                    oldMatch.team1_wickets -= 1;
+                }
+            } else {
+                const runs = ball.runs || 0;
+                if (oldMatch.team1 === oldBowler.team) {
+                    oldMatch.team2_score -= runs;
+                } else {
+                    oldMatch.team1_score -= runs;
+                }
+                if (ball.runs_to) {
+                    const batsman = await Player.findById(ball.runs_to);
+                    batsman.runs_scored -= runs;
+                    await batsman.save();
+                }
+            }
+        });
+
+        oldBowler.overs_bowled -= 1;
+        await oldBowler.save();
+        await oldMatch.save();
+
+        // Update score with new values
         score.match_id = match_id || score.match_id;
         score.over_number = over_number || score.over_number;
         score.balls_per_over = balls_per_over || score.balls_per_over;
@@ -89,6 +121,37 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
         score.balls = balls ? JSON.parse(balls) : score.balls;
 
         await score.save();
+
+        // Update new statistics
+        const newMatch = await Match.findById(score.match_id);
+        const newBowler = await Player.findById(score.bowler_id);
+
+        score.balls.forEach(async ball => {
+            if (ball.result === 'wicket') {
+                newBowler.wickets_taken += 1;
+                if (newMatch.team1 === newBowler.team) {
+                    newMatch.team2_wickets += 1;
+                } else {
+                    newMatch.team1_wickets += 1;
+                }
+            } else {
+                const runs = ball.runs || 0;
+                if (newMatch.team1 === newBowler.team) {
+                    newMatch.team2_score += runs;
+                } else {
+                    newMatch.team1_score += runs;
+                }
+                if (ball.runs_to) {
+                    const batsman = await Player.findById(ball.runs_to);
+                    batsman.runs_scored += runs;
+                    await batsman.save();
+                }
+            }
+        });
+
+        newBowler.overs_bowled += 1;
+        await newBowler.save();
+        await newMatch.save();
 
         res.send('Score updated successfully');
     } catch (error) {
