@@ -26,11 +26,10 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
     }
 });
 
-// TODO bug - Get all players
-router.get('/', async (req, res) => {
+// Get all players
+router.get('/all', async (req, res) => {
     try {
         const players = await Player.find();
-        console.log('=============' + players);
         res.send(players);
     } catch (error) {
         console.log(error);
