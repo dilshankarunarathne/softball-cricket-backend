@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const Score = require('../models/Score');
 const Match = require('../models/Match');
 const Player = require('../models/Player');
@@ -33,7 +34,7 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
         const match = await Match.findById(match_id);
         const bowler = await Player.findById(bowler_id);
 
-        parsedBalls.forEach(async ball => {
+        for (const ball of parsedBalls) {
             if (ball.result === 'wicket') {
                 bowler.wickets_taken += 1;
                 if (match.team1 === bowler.team) {
@@ -48,13 +49,15 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
                 } else {
                     match.team1_score += runs;
                 }
-                if (ball.runs_to) {
+                if (ball.runs_to && mongoose.Types.ObjectId.isValid(ball.runs_to)) {
                     const batsman = await Player.findById(ball.runs_to);
-                    batsman.runs_scored += runs;
-                    await batsman.save();
+                    if (batsman) {
+                        batsman.runs_scored += runs;
+                        await batsman.save();
+                    }
                 }
             }
-        });
+        }
 
         bowler.overs_bowled += 1;
         await bowler.save();
@@ -62,7 +65,7 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
 
         res.sendStatus(201);
     } catch (error) {
-        console.log(error);
+        console.error('Error in POST /scores:', error);
         res.status(500).send('Internal server error');
     }
 });
@@ -86,7 +89,7 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
         const oldMatch = await Match.findById(score.match_id);
         const oldBowler = await Player.findById(score.bowler_id);
 
-        score.balls.forEach(async ball => {
+        for (const ball of score.balls) {
             if (ball.result === 'wicket') {
                 oldBowler.wickets_taken -= 1;
                 if (oldMatch.team1 === oldBowler.team) {
@@ -101,13 +104,15 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
                 } else {
                     oldMatch.team1_score -= runs;
                 }
-                if (ball.runs_to) {
+                if (ball.runs_to && mongoose.Types.ObjectId.isValid(ball.runs_to)) {
                     const batsman = await Player.findById(ball.runs_to);
-                    batsman.runs_scored -= runs;
-                    await batsman.save();
+                    if (batsman) {
+                        batsman.runs_scored -= runs;
+                        await batsman.save();
+                    }
                 }
             }
-        });
+        }
 
         oldBowler.overs_bowled -= 1;
         await oldBowler.save();
@@ -126,7 +131,7 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
         const newMatch = await Match.findById(score.match_id);
         const newBowler = await Player.findById(score.bowler_id);
 
-        score.balls.forEach(async ball => {
+        for (const ball of score.balls) {
             if (ball.result === 'wicket') {
                 newBowler.wickets_taken += 1;
                 if (newMatch.team1 === newBowler.team) {
@@ -141,13 +146,15 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
                 } else {
                     newMatch.team1_score += runs;
                 }
-                if (ball.runs_to) {
+                if (ball.runs_to && mongoose.Types.ObjectId.isValid(ball.runs_to)) {
                     const batsman = await Player.findById(ball.runs_to);
-                    batsman.runs_scored += runs;
-                    await batsman.save();
+                    if (batsman) {
+                        batsman.runs_scored += runs;
+                        await batsman.save();
+                    }
                 }
             }
-        });
+        }
 
         newBowler.overs_bowled += 1;
         await newBowler.save();
@@ -155,7 +162,7 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
 
         res.send('Score updated successfully');
     } catch (error) {
-        console.log(error);
+        console.error('Error in PUT /scores/:id:', error);
         res.status(500).send('Internal server error');
     }
 });
