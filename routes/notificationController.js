@@ -2,10 +2,13 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const Notification = require('../models/Notification');
+const multer = require('multer');
 const authMiddleware = require('../middleware/authMiddleware');
 
+const upload = multer();
+
 // Create a new notification (for testing purposes, not used in production)
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', authMiddleware, upload.none(), async (req, res) => {
   const { message } = req.body;
   const token = req.headers.authorization.split(' ')[1];
 
@@ -13,6 +16,10 @@ router.post('/', authMiddleware, async (req, res) => {
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
     if (decoded.user_type !== 'admin') {
       return res.status(403).send('Only admins can create notifications');
+    }
+
+    if (!message) {
+      return res.status(400).send('Message is required');
     }
 
     const notification = new Notification({ message });
