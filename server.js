@@ -14,5 +14,7 @@ app.use('/matches', require('./routes/matchController'));
 app.use('/teams', require('./routes/teamController'));
 app.use('/score', require('./routes/scoreController'));
 app.use('/player', require('./routes/playerController'));
+app.use('/news', require('./routes/newsController'));
+app.use('/notifications', require('./routes/notificationController'));
 
 app.listen(3000, () => console.log('Server started on port 3000'));
