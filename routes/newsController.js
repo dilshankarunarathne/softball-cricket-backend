@@ -3,12 +3,29 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const News = require('../models/News');
 const multer = require('multer');
-const upload = multer();
+const path = require('path');
+const fs = require('fs');
 const authMiddleware = require('../middleware/authMiddleware');
 
+// Set up multer for file uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadPath = path.join(__dirname, '../public/uploads');
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+        }
+        cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    }
+});
+
+const upload = multer({ storage });
+
 // Create a new news item
-router.post('/', authMiddleware, upload.none(), async (req, res) => {
-    const { image, description } = req.body;
+router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
+    const { description } = req.body;
     const token = req.headers.authorization.split(' ')[1];
 
     try {
@@ -17,7 +34,8 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
             return res.status(403).send('Only admins can create news items');
         }
 
-        const news = new News({ image, description });
+        const imageUrl = req.file ? `/uploads/${req.file.filename}` : '';
+        const news = new News({ image: imageUrl, description });
         await news.save();
         res.status(201).send('News item created successfully');
     } catch (error) {
@@ -52,8 +70,8 @@ router.get('/:id', async (req, res) => {
 });
 
 // Update a news item by ID
-router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
-    const { image, description } = req.body;
+router.put('/:id', authMiddleware, upload.single('image'), async (req, res) => {
+    const { description } = req.body;
     const token = req.headers.authorization.split(' ')[1];
 
     try {
@@ -67,7 +85,10 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
             return res.status(404).send('News item not found');
         }
 
-        newsItem.image = image || newsItem.image;
+        if (req.file) {
+            const imageUrl = `/uploads/${req.file.filename}`;
+            newsItem.image = imageUrl;
+        }
         newsItem.description = description || newsItem.description;
         await newsItem.save();
 
@@ -79,7 +100,7 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
 });
 
 // Delete a news item by ID
-router.delete('/:id', authMiddleware, upload.none(), async (req, res) => {
+router.delete('/:id', authMiddleware, async (req, res) => {
     const token = req.headers.authorization.split(' ')[1];
 
     try {
