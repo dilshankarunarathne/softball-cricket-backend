@@ -17,9 +17,6 @@ const MatchSchema = new mongoose.Schema({
   team2_overs_played: { type: Number, default: 0 },
   winner: { type: String, default: '' },
   status: { type: String, default: 'pending' },
-
-  // dynamic fields
-  // TODO: add more fields as necessary
 });
 
 module.exports = mongoose.model('Match', MatchSchema);
