@@ -13,6 +13,8 @@ const MatchSchema = new mongoose.Schema({
   team2_score: { type: Number, default: 0 },
   team1_wickets: { type: Number, default: 0 },
   team2_wickets: { type: Number, default: 0 },
+  team1_overs_played: { type: Number, default: 0 },
+  team2_overs_played: { type: Number, default: 0 },
   winner: { type: String, default: '' },
   status: { type: String, default: 'pending' },
 
