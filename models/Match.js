@@ -24,6 +24,8 @@ const MatchSchema = new mongoose.Schema({
   team2_overs_played: { type: Number, default: 0 },
   winner: { type: String, default: '' },
   status: { type: String, default: 'pending' },
+  toss_winner: { type: String, default: '' },
+  bat_first: { type: String, default: '' },
   player_stats: [PlayerStatsSchema]
 });
 
