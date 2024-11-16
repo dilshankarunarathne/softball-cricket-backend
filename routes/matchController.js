@@ -27,17 +27,17 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
             start_time,
             end_time,
             location,
-            team1_score: team1_score || 0,
-            team2_score: team2_score || 0,
-            team1_wickets: team1_wickets || 0,
-            team2_wickets: team2_wickets || 0,
-            team1_overs_played: team1_overs_played || 0,
-            team2_overs_played: team2_overs_played || 0,
-            winner: winner || '',
-            status: status || 'pending',
-            toss_winner: toss_winner || '',
-            bat_first: bat_first || '',
-            player_stats: player_stats || []
+            team1_score: team1_score ?? 0,
+            team2_score: team2_score ?? 0,
+            team1_wickets: team1_wickets ?? 0,
+            team2_wickets: team2_wickets ?? 0,
+            team1_overs_played: team1_overs_played ?? 0,
+            team2_overs_played: team2_overs_played ?? 0,
+            winner: winner ?? '',
+            status: status ?? 'pending',
+            toss_winner: toss_winner ?? '',
+            bat_first: bat_first ?? '',
+            player_stats: player_stats ?? []
         });
         await match.save();
 
