@@ -11,7 +11,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const Team = require('../models/Team');
 
 router.post('/', authMiddleware, upload.none(), async (req, res) => {
-    const { team1, team2, date, start_time, end_time, location } = req.body;
+    const { team1, team2, date, start_time, end_time, location, team1_score, team2_score, team1_wickets, team2_wickets, team1_overs_played, team2_overs_played, winner, status, toss_winner, bat_first, player_stats } = req.body;
     const token = req.headers.authorization.split(' ')[1];
 
     try {
@@ -20,7 +20,25 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
             return res.status(403).send('Only admins can create matches');
         } 
 
-        const match = new Match({ team1, team2, date, start_time, end_time, location });
+        const match = new Match({
+            team1,
+            team2,
+            date,
+            start_time,
+            end_time,
+            location,
+            team1_score: team1_score || 0,
+            team2_score: team2_score || 0,
+            team1_wickets: team1_wickets || 0,
+            team2_wickets: team2_wickets || 0,
+            team1_overs_played: team1_overs_played || 0,
+            team2_overs_played: team2_overs_played || 0,
+            winner: winner || '',
+            status: status || 'pending',
+            toss_winner: toss_winner || '',
+            bat_first: bat_first || '',
+            player_stats: player_stats || []
+        });
         await match.save();
 
         // Increment matches played for each team
@@ -77,23 +95,23 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
             return res.status(404).send('Match not found');
         }
 
-        match.team1 = team1;
-        match.team2 = team2;
-        match.date = date;
-        match.start_time = start_time;
-        match.end_time = end_time;
-        match.location = location;
-        match.team1_score = team1_score;
-        match.team2_score = team2_score;
-        match.team1_wickets = team1_wickets;
-        match.team2_wickets = team2_wickets;
-        match.team1_overs_played = team1_overs_played;
-        match.team2_overs_played = team2_overs_played;
-        match.winner = winner;
-        match.status = status;
-        match.toss_winner = toss_winner;
-        match.bat_first = bat_first;
-        match.player_stats = player_stats;
+        match.team1 = team1 || match.team1;
+        match.team2 = team2 || match.team2;
+        match.date = date || match.date;
+        match.start_time = start_time || match.start_time;
+        match.end_time = end_time || match.end_time;
+        match.location = location || match.location;
+        match.team1_score = team1_score || match.team1_score;
+        match.team2_score = team2_score || match.team2_score;
+        match.team1_wickets = team1_wickets || match.team1_wickets;
+        match.team2_wickets = team2_wickets || match.team2_wickets;
+        match.team1_overs_played = team1_overs_played || match.team1_overs_played;
+        match.team2_overs_played = team2_overs_played || match.team2_overs_played;
+        match.winner = winner || match.winner;
+        match.status = status || match.status;
+        match.toss_winner = toss_winner || match.toss_winner;
+        match.bat_first = bat_first || match.bat_first;
+        match.player_stats = player_stats || match.player_stats;
         await match.save();
 
         res.send('Match updated successfully');
