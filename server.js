@@ -8,6 +8,8 @@ const db = require('./db');
 app.use(cors()); 
 app.use(express.json());
 
+app.use('/uploads', express.static('public/uploads'));
+
 app.use('/auth', require('./routes/authController'));
 app.use('/admin', require('./routes/adminController'));
 app.use('/matches', require('./routes/matchController'));
