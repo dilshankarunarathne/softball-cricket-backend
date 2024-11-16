@@ -28,7 +28,6 @@ router.post('/login', upload.none(), async (req, res) => {
   res.send({ token });
 });
 
-// TODO: add more fields to the user model for profile
 router.get('/profile', async (req, res) => {
   const token = req.headers.authorization.split(' ')[1];
   try {
@@ -45,8 +44,10 @@ router.put('/profile', upload.none(), async (req, res) => {
   try {
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
     const user = await User.findById(decoded._id);
-    // user.username = req.body.username;
-    // TOOD: handle user account details
+    user.firstName = req.body.firstName || user.firstName;
+    user.lastName = req.body.lastName || user.lastName;
+    user.email = req.body.email || user.email;
+    user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
     await user.save();
     res.send('account updated successfully');
   } catch (error) {
