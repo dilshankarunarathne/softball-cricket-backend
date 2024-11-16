@@ -8,6 +8,7 @@ const Notification = require('../models/Notification');
 const multer = require('multer');
 const upload = multer();
 const authMiddleware = require('../middleware/authMiddleware');
+const Team = require('../models/Team');
 
 router.post('/', authMiddleware, upload.none(), async (req, res) => {
     const { team1, team2, date, start_time, end_time, location } = req.body;
@@ -21,6 +22,10 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
 
         const match = new Match({ team1, team2, date, start_time, end_time, location });
         await match.save();
+
+        // Increment matches played for each team
+        await Team.updateOne({ name: team1 }, { $inc: { matches: 1 } });
+        await Team.updateOne({ name: team2 }, { $inc: { matches: 1 } });
 
         // Create a notification for the scheduled match
         const message = `A new match has been scheduled between ${team1} and ${team2} on ${date} at ${location}.`;

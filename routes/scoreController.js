@@ -30,13 +30,11 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
 
         await score.save();
 
-        // Update match and player statistics
+        // Update match statistics
         const match = await Match.findById(match_id);
-        const bowler = await Player.findById(bowler_id);
 
         for (const ball of parsedBalls) {
             if (ball.result === 'wicket') {
-                bowler.wickets_taken += 1;
                 if (match.team1 === bowler.team) {
                     match.team2_wickets += 1;
                 } else {
@@ -52,15 +50,23 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
                 if (ball.runs_to && mongoose.Types.ObjectId.isValid(ball.runs_to)) {
                     const batsman = await Player.findById(ball.runs_to);
                     if (batsman) {
-                        batsman.runs_scored += runs;
-                        await batsman.save();
+                        // Update match-specific batsman statistics
+                        const batsmanStats = match.player_stats.id(ball.runs_to) || { player_id: ball.runs_to, runs_scored: 0 };
+                        batsmanStats.runs_scored += runs;
+                        if (!match.player_stats.id(ball.runs_to)) {
+                            match.player_stats.push(batsmanStats);
+                        }
                     }
                 }
             }
         }
 
-        bowler.overs_bowled += 1;
-        await bowler.save();
+        // Update match-specific bowler statistics
+        const bowlerStats = match.player_stats.id(bowler_id) || { player_id: bowler_id, wickets_taken: 0, overs_bowled: 0 };
+        bowlerStats.overs_bowled += 1;
+        if (!match.player_stats.id(bowler_id)) {
+            match.player_stats.push(bowlerStats);
+        }
         await match.save();
 
         res.sendStatus(201);
@@ -87,11 +93,9 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
 
         // Revert old statistics
         const oldMatch = await Match.findById(score.match_id);
-        const oldBowler = await Player.findById(score.bowler_id);
 
         for (const ball of score.balls) {
             if (ball.result === 'wicket') {
-                oldBowler.wickets_taken -= 1;
                 if (oldMatch.team1 === oldBowler.team) {
                     oldMatch.team2_wickets -= 1;
                 } else {
@@ -107,15 +111,21 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
                 if (ball.runs_to && mongoose.Types.ObjectId.isValid(ball.runs_to)) {
                     const batsman = await Player.findById(ball.runs_to);
                     if (batsman) {
-                        batsman.runs_scored -= runs;
-                        await batsman.save();
+                        // Revert match-specific batsman statistics
+                        const batsmanStats = oldMatch.player_stats.id(ball.runs_to);
+                        if (batsmanStats) {
+                            batsmanStats.runs_scored -= runs;
+                        }
                     }
                 }
             }
         }
 
-        oldBowler.overs_bowled -= 1;
-        await oldBowler.save();
+        // Revert match-specific bowler statistics
+        const oldBowlerStats = oldMatch.player_stats.id(score.bowler_id);
+        if (oldBowlerStats) {
+            oldBowlerStats.overs_bowled -= 1;
+        }
         await oldMatch.save();
 
         // Update score with new values
@@ -129,11 +139,9 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
 
         // Update new statistics
         const newMatch = await Match.findById(score.match_id);
-        const newBowler = await Player.findById(score.bowler_id);
 
         for (const ball of score.balls) {
             if (ball.result === 'wicket') {
-                newBowler.wickets_taken += 1;
                 if (newMatch.team1 === newBowler.team) {
                     newMatch.team2_wickets += 1;
                 } else {
@@ -149,15 +157,23 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
                 if (ball.runs_to && mongoose.Types.ObjectId.isValid(ball.runs_to)) {
                     const batsman = await Player.findById(ball.runs_to);
                     if (batsman) {
-                        batsman.runs_scored += runs;
-                        await batsman.save();
+                        // Update match-specific batsman statistics
+                        const batsmanStats = newMatch.player_stats.id(ball.runs_to) || { player_id: ball.runs_to, runs_scored: 0 };
+                        batsmanStats.runs_scored += runs;
+                        if (!newMatch.player_stats.id(ball.runs_to)) {
+                            newMatch.player_stats.push(batsmanStats);
+                        }
                     }
                 }
             }
         }
 
-        newBowler.overs_bowled += 1;
-        await newBowler.save();
+        // Update match-specific bowler statistics
+        const newBowlerStats = newMatch.player_stats.id(score.bowler_id) || { player_id: score.bowler_id, wickets_taken: 0, overs_bowled: 0 };
+        newBowlerStats.overs_bowled += 1;
+        if (!newMatch.player_stats.id(score.bowler_id)) {
+            newMatch.player_stats.push(newBowlerStats);
+        }
         await newMatch.save();
 
         res.send('Score updated successfully');
