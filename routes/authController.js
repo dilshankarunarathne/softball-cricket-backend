@@ -55,4 +55,28 @@ router.put('/profile', upload.none(), async (req, res) => {
   }
 });
 
+router.post('/reset-password', upload.none(), async (req, res) => {
+  const token = req.headers.authorization.split(' ')[1];
+  const { newPassword } = req.body;
+
+  if (!newPassword) {
+    return res.status(400).send('New password is required');
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    const user = await User.findById(decoded._id);
+    if (!user) {
+      return res.status(404).send('User not found');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+    res.send('Password reset successfully');
+  } catch (error) {
+    res.sendStatus(500);
+  }
+});
+
 module.exports = router;
