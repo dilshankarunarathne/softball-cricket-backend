@@ -20,6 +20,7 @@ router.post('/change-user-type', authMiddleware, upload.none(), async (req, res)
 
     const user = await User.findOne({ username });
     if (!user) {
+      console.log(username + 'User not found');
       return res.status(404).send('User not found');
     }
 
@@ -98,6 +99,26 @@ router.get('/view-all-users', authMiddleware, async (req, res) => {
 
     const users = await User.find();
     res.send(users);
+  } catch (error) {
+    res.status(500).send('Internal server error');
+  }
+});
+
+router.delete('/delete-user/:id', authMiddleware, async (req, res) => {
+  const token = req.headers.authorization.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    if (decoded.user_type !== 'admin') {
+      return res.status(403).send('Only admins can delete users');
+    }
+
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) {
+      return res.status(404).send('User not found');
+    }
+
+    res.send('User deleted successfully');
   } catch (error) {
     res.status(500).send('Internal server error');
   }
