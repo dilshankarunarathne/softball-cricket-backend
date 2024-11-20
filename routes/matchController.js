@@ -10,6 +10,56 @@ const upload = multer();
 const authMiddleware = require('../middleware/authMiddleware');
 const Team = require('../models/Team');
 
+router.post('/halftime', authMiddleware, upload.none(), async (req, res) => {
+    const { match_id } = req.body;
+    const token = req.headers.authorization.split(' ')[1]
+
+    try {
+        const match = await Match.findById(match_id);
+        if (!match) {
+            return res.status(404).send('Match not found');
+        }
+
+        let batting_team = match.bat_first === match.team1 ? match.team1 : match.team2;
+
+        if (match.halftime === 'Yes') {
+            if (match.team1 === batting_team) {
+                batting_team = match.team2;
+            } else {
+                batting_team = match.team1;
+            }
+            return res.status(200).send({ batting_team, halftime: 'Yes' });
+        }
+        return res.status(200).send({ batting_team, halftime: 'No' });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send('Internal server error');
+    }
+});
+
+router.post('/switch', authMiddleware, upload.none(), async (req, res) => {
+    const { match_id } = req.body;
+    const token = req.headers.authorization.split(' ')[1];
+
+    console.log("Switching teams");
+
+    try {
+        const match = await Match.findById(match_id);
+        if (!match) {
+            return res.status(404).send('Match not found');
+        }
+
+        match.halftime = 'Yes';
+
+        await match.save();
+
+        res.send('Teams switched successfully');
+    } catch (error) {
+        console.log(error);
+        res.status(500).send('Internal server error');
+    }
+});
+
 router.post('/', authMiddleware, upload.none(), async (req, res) => {
     const { team1, team2, date, start_time, end_time, location, team1_score, team2_score, team1_wickets, team2_wickets, team1_overs_played, team2_overs_played, winner, status, toss_winner, bat_first, player_stats } = req.body;
     const token = req.headers.authorization.split(' ')[1];

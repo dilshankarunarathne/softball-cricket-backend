@@ -15,6 +15,8 @@ const MatchSchema = new mongoose.Schema({
   end_time: { type: String, required: true },
   location: { type: String, required: true },
 
+  halftime: { type: String, default: 'No' },
+
   // result fields
   team1_score: { type: Number, default: 0 },
   team2_score: { type: Number, default: 0 },

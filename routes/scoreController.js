@@ -86,12 +86,10 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
 
         let match = await Match.findOne({ _id: match_id });
 
-        if (!match.team1) {
-            console.log('Team players not defined'); // Add this line
-            return res.status(400).send('Team players not defined');
-        }
+        // calculate match score/wickets
 
-        // TODO: calculate match score/wickets
+        // find the batting team
+        
         const battingTeam = match.bat_first;
         const battingTeamId = battingTeam === 'team1' ? match.team1 : match.team2;
 
