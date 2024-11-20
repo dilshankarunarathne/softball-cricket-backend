@@ -67,6 +67,17 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
         return res.status(400).send('Invalid balls format');
     }
 
+    const ballsArray = JSON.parse(balls);
+    for (const ball of ballsArray) {
+        if (ball.result !== 'wicket' && ball.result !== 'none' && ball.runs_to && !mongoose.Types.ObjectId.isValid(ball.runs_to)) {
+            console.log('Invalid runs_to'); // Add this line
+            return res.status(400).send('Invalid runs_to');
+        }
+        if (ball.runs_to === '') {
+            ball.runs_to = null; // Convert empty string to null
+        }
+    }
+
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
         if (decoded.user_type !== 'temp-admin') {
@@ -82,10 +93,10 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
 
         let over = score.overs.find(o => o.over_number === over_number);
         if (!over) {
-            over = { over_number, balls: JSON.parse(balls) };
+            over = { over_number, balls: ballsArray };
             score.overs.push(over);
         } else {
-            over.balls = JSON.parse(balls);
+            over.balls = ballsArray;
         }
 
         await score.save();
@@ -95,7 +106,7 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
         const match = await Match.findById(match_id);
         const bowler = await Player.findById(bowler_id);
 
-        for (const ball of JSON.parse(balls)) {
+        for (const ball of ballsArray) {
             if (ball.result === 'wicket') {
                 if (match.team1 === bowler.team) {
                     match.team2_wickets += 1;
@@ -155,6 +166,13 @@ router.post('/add-ball', authMiddleware, upload.none(), async (req, res) => {
     if (!ball || !ball.result) {
         console.log('Invalid ball data'); // Add this line
         return res.status(400).send('Invalid ball data');
+    }
+    if (ball.result !== 'wicket' && ball.result !== 'none' && ball.runs_to && !mongoose.Types.ObjectId.isValid(ball.runs_to)) {
+        console.log('Invalid runs_to'); // Add this line
+        return res.status(400).send('Invalid runs_to');
+    }
+    if (ball.runs_to === '') {
+        ball.runs_to = null; // Convert empty string to null
     }
 
     try {
@@ -273,6 +291,17 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
         return res.status(400).send('Invalid balls format');
     }
 
+    const ballsArray = JSON.parse(balls);
+    for (const ball of ballsArray) {
+        if (ball.result !== 'wicket' && ball.result !== 'none' && ball.runs_to && !mongoose.Types.ObjectId.isValid(ball.runs_to)) {
+            console.log('Invalid runs_to'); // Add this line
+            return res.status(400).send('Invalid runs_to');
+        }
+        if (ball.runs_to === '') {
+            ball.runs_to = null; // Convert empty string to null
+        }
+    }
+
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
         if (decoded.user_type !== 'temp-admin') {
@@ -329,7 +358,7 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
         score.over_number = over_number || score.over_number;
         score.balls_per_over = balls_per_over || score.balls_per_over;
         score.bowler_id = bowler_id || score.bowler_id;
-        score.balls = balls ? JSON.parse(balls) : score.balls;
+        score.balls = ballsArray;
 
         await score.save();
         console.log('Score updated successfully'); // Add this line
