@@ -52,6 +52,33 @@ router.post('/create', authMiddleware, upload.none(), async (req, res) => {
     }
 });
 
+// endpoint for finding wicket out batsmans list
+router.get('/wicket-out-batsmans/:match_id', authMiddleware, async (req, res) => {
+    console.log('GET /wicket-out-batsmans/:match_id called'); // Add this line
+    const { match_id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(match_id)) {
+        console.log('Invalid match_id'); // Add this line
+        return res.status(400).send('Invalid match_id');
+    }
+
+    try {
+        const match = await Match.findById(match_id);
+        if (!match) {
+            console.log('Match not found');
+            return res.status(404).send('Match not found');
+        }
+
+        const response = match.wicket_out_players;
+
+        console.log('Wicket out batsmans fetched successfully: ', response);
+        res.status(200).json(response);
+    } catch (error) {
+        console.error('Error in GET /wicket-out-batsmans/:match_id:', error);
+        res.status(500).send('Internal server error');
+    }
+});
+
 // Endpoint to save an over
 router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
     console.log('POST /add-over called'); // Add this line
@@ -121,6 +148,11 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
             } else if (battingTeamId.toString() === match.team2.toString()) {
                 match.team2_wickets += 1;
             }
+
+            console.log('new wicket: ', ball.wicket);
+
+            match.wicket_out_players.push(ball.wicket);
+            console.log('wicket out players updated: ', match.wicket_out_players);
 
             // Update bowler's wickets and points
             let bowler = await Player.findOne({ _id: bowler_id });
