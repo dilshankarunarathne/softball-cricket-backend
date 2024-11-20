@@ -117,8 +117,17 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
                 console.log('extra run scored by team2');
                 match.team2_score += 1;
             }
-        } else {
-            totalRuns += ball.runs || 0;
+        } else if (ball.result === 'runs') {
+            // find the bat team and update the score
+            console.log(ball.runs, ' runs scored by team: ', battingTeamId);
+            if (battingTeamId.toString() === match.team1.toString()) {
+                console.log('run scored by team1');
+                match.team1_score += ball.runs;
+            } else if (battingTeamId.toString() === match.team2.toString()) {
+                console.log('run scored by team2');
+                match.team2_score += ball.runs;
+            }
+        
         }
 
         // save the match data to database 
