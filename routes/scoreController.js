@@ -8,6 +8,7 @@ const Player = require('../models/Player');
 const multer = require('multer');
 const upload = multer();
 const authMiddleware = require('../middleware/authMiddleware');
+const Team = require('../models/Team');
 
 // Endpoint to create a match-scoring entity
 router.post('/create', authMiddleware, upload.none(), async (req, res) => {
@@ -120,6 +121,23 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
             } else if (battingTeamId.toString() === match.team2.toString()) {
                 match.team2_wickets += 1;
             }
+
+            // Update bowler's wickets and points
+            let bowler = await Player.findOne({ _id: bowler_id });
+            bowler.wickets_taken += 1;
+            bowler.points += 1;
+            await bowler.save();
+            console.log('bowler points updated: ', bowler.points);
+
+            // Update team points
+            let ball_team_id = match.team1.toString();
+            if (battingTeamId.toString() === match.team1.toString()) {
+                ball_team_id = match.team2.toString();
+            }
+            let ball_team = await Team.findOne({ _id: ball_team_id });
+            ball_team.points += 1;
+            await ball_team.save();
+            console.log('team points updated: ', ball_team.points);
         } else if (ball.result === 'Extra Run') {
             // find the bat team and update the score
             console.log('Extra run scored by team: ', battingTeamId);
@@ -140,7 +158,16 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
                 console.log('run scored by team2');
                 match.team2_score += ball.runs;
             }
-        
+
+            // Update batsman's runs and points
+            if (ball.runs_to) {
+                const batsman = await Player.findById(ball.runs_to);
+                if (batsman) {
+                    batsman.points += ball.runs;
+                    await batsman.save();
+                    console.log('batsman points updated: ', batsman.points);
+                }
+            }
         }
 
         // save the match data to database 
@@ -194,13 +221,17 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
 
         match.player_stats = match.player_stats || [];
 
-        // TODO Update match-specific bowler statistics
+        // Update match-specific bowler statistics
         let bowlerStats = match.player_stats.find(p => p.player_id.toString() === bowler_id);
         if (!bowlerStats) {
             bowlerStats = { player_id: bowler_id, wickets_taken: 0, overs_bowled: 0 };
             match.player_stats.push(bowlerStats);
         }
         bowlerStats.overs_bowled += 1;
+
+        // Update bowler statistics in Player object
+        bowler.overs_bowled += 1;
+        await bowler.save();
 
         await match.save();
 
@@ -507,6 +538,10 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
         if (!newMatch.player_stats.id(score.bowler_id)) {
             newMatch.player_stats.push(newBowlerStats);
         }
+
+        // Update bowler statistics in Player object
+        newBowler.overs_bowled += 1;
+        await newBowler.save();
 
         // Calculate and update total scores
         newMatch.team1_score = newMatch.player_stats.filter(p => newMatch.team1_players.includes(p.player_id)).reduce((acc, p) => acc + p.runs_scored, 0);

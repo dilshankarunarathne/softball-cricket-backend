@@ -14,6 +14,8 @@ const PlayerSchema = new mongoose.Schema({
   matches_played: { type: Number, default: 0 },
   points: { type: Number, default: 0 },
   rating: { type: Number, default: 0 },
+  overs_bowled: { type: Number, default: 0 },
+  wickets_taken: { type: Number, default: 0 },
 });
 
 module.exports = mongoose.model('Player', PlayerSchema);
