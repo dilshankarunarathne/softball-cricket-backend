@@ -104,18 +104,27 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
 
         // Update match statistics
         const match = await Match.findById(match_id);
+        if (!match) {
+            console.log('Match not found'); // Add this line
+            return res.status(404).send('Match not found');
+        }
+
         const bowler = await Player.findById(bowler_id);
+        if (!bowler || !bowler.team) {
+            console.log('Bowler or bowler team not found'); // Add this line
+            return res.status(404).send('Bowler or bowler team not found');
+        }
 
         for (const ball of ballsArray) {
             if (ball.result === 'wicket') {
-                if (match.team1 === bowler.team) {
+                if (match.team1.equals(bowler.team)) {
                     match.team2_wickets += 1;
                 } else {
                     match.team1_wickets += 1;
                 }
             } else {
                 const runs = ball.runs || 0;
-                if (match.team1 === bowler.team) {
+                if (match.team1.equals(bowler.team)) {
                     match.team2_score += runs;
                 } else {
                     match.team1_score += runs;
@@ -243,9 +252,9 @@ router.post('/add-ball', authMiddleware, upload.none(), async (req, res) => {
     }
 });
 
-// Endpoint to fetch players for a match
-router.get('/players/:match_id', authMiddleware, async (req, res) => {
-    console.log('GET /players/:match_id called'); // Add this line
+// Endpoint to fetch the current score for a match
+router.get('/current/:match_id', authMiddleware, async (req, res) => {
+    console.log('GET /current/:match_id called'); // Add this line
     const { match_id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(match_id)) {
@@ -254,21 +263,30 @@ router.get('/players/:match_id', authMiddleware, async (req, res) => {
     }
 
     try {
+        const score = await Score.findOne({ match_id });
+        if (!score) {
+            console.log('Match-scoring entity not found'); // Add this line
+            return res.status(404).send('Match-scoring entity not found');
+        }
+
         const match = await Match.findById(match_id);
         if (!match) {
             console.log('Match not found'); // Add this line
             return res.status(404).send('Match not found');
         }
 
-        const team1Players = await Player.find({ team: match.team1 });
-        const team2Players = await Player.find({ team: match.team2 });
+        const response = {
+            team1_score: match.team1_score,
+            team2_score: match.team2_score,
+            team1_wickets: match.team1_wickets,
+            team2_wickets: match.team2_wickets,
+            overs: score.overs
+        };
 
-        const combinedPlayers = [...team1Players, ...team2Players];
-        console.log('Players fetched successfully'); // Add this line
-
-        res.status(200).json(combinedPlayers);
+        console.log('Current score fetched successfully'); // Add this line
+        res.status(200).json(response);
     } catch (error) {
-        console.error('Error in GET /players/:match_id:', error);
+        console.error('Error in GET /current/:match_id:', error);
         res.status(500).send('Internal server error');
     }
 });
