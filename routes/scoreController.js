@@ -118,8 +118,7 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
             return res.status(400).send('Invalid bowler_id');
         }
 
-        // TODO BUG: bowler is not found by _id
-        const bowler = await Player.findById(bowler_id); // Fix this line
+        const bowler = await Player.findById(bowler_id); 
         console.log('bowler:', bowler); 
         if (!bowler) {
             console.log('Bowler not found');
