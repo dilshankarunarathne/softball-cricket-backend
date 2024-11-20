@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const Player = require('../models/Player');
+const Match = require('../models/Match'); // Add this line
 const multer = require('multer');
 const upload = multer();
 const authMiddleware = require('../middleware/authMiddleware');
@@ -40,7 +41,18 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
 router.get('/match/:matchId', async (req, res) => {
     try {
         const { matchId } = req.params;
-        const players = await Player.find({ match_id: matchId });
+        
+        // get the two team ids for that match
+        const match = await Match.findById (matchId);
+        if (!match) {
+            return res.status(404).send('Match not found');
+        }
+        const team1 = match.team1;
+        const team2 = match.team2;
+
+        // get all players for those two teams
+        const players = await Player.find({ $or: [{ team: team1 }, { team: team2 }] });      
+
         if (players.length === 0) {
             console.log(`No players found for match ID: ${matchId}`);
         }

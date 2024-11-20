@@ -206,6 +206,32 @@ router.post('/add-ball', authMiddleware, upload.none(), async (req, res) => {
     }
 });
 
+// Endpoint to fetch players for a match
+router.get('/players/:match_id', authMiddleware, async (req, res) => {
+    const { match_id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(match_id)) {
+        return res.status(400).send('Invalid match_id');
+    }
+
+    try {
+        const match = await Match.findById(match_id);
+        if (!match) {
+            return res.status(404).send('Match not found');
+        }
+
+        const team1Players = await Player.find({ team: match.team1 });
+        const team2Players = await Player.find({ team: match.team2 });
+
+        const combinedPlayers = [...team1Players, ...team2Players];
+
+        res.status(200).json(combinedPlayers);
+    } catch (error) {
+        console.error('Error in GET /players/:match_id:', error);
+        res.status(500).send('Internal server error');
+    }
+});
+
 router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
     const { match_id, over_number, balls_per_over, bowler_id, balls } = req.body;
     const token = req.headers.authorization.split(' ')[1];
