@@ -16,6 +16,7 @@ const MatchSchema = new mongoose.Schema({
   location: { type: String, required: true },
 
   halftime: { type: String, default: 'No' },
+  wicket_out_players: { type: Array, default: [] },
 
   // result fields
   team1_score: { type: Number, default: 0 },
