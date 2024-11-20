@@ -105,26 +105,34 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
         // Update match statistics
         const match = await Match.findById(match_id);
         if (!match) {
-            console.log('Match not found'); // Add this line
+            console.log('Match not found'); 
             return res.status(404).send('Match not found');
         }
 
-        const bowler = await Player.findById(bowler_id);
-        if (!bowler || !bowler.team) {
-            console.log('Bowler or bowler team not found'); // Add this line
-            return res.status(404).send('Bowler or bowler team not found');
+        console.log('bowler_id:', bowler_id); 
+        if (!mongoose.Types.ObjectId.isValid(bowler_id)) {
+            console.log('Invalid bowler_id'); 
+            return res.status(400).send('Invalid bowler_id');
+        }
+
+        // TODO BUG: bowler is not found by _id
+        const bowler = await Player.findById(bowler_id); // Fix this line
+        console.log('bowler:', bowler); 
+        if (!bowler) {
+            console.log('Bowler not found');
+            return res.status(404).send('Bowler not found');
         }
 
         for (const ball of ballsArray) {
             if (ball.result === 'wicket') {
-                if (match.team1.equals(bowler.team)) {
+                if (match.team1 === bowler.team) {
                     match.team2_wickets += 1;
                 } else {
                     match.team1_wickets += 1;
                 }
             } else {
                 const runs = ball.runs || 0;
-                if (match.team1.equals(bowler.team)) {
+                if (match.team1 === bowler.team) {
                     match.team2_score += runs;
                 } else {
                     match.team1_score += runs;
@@ -149,6 +157,11 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
         if (!match.player_stats.id(bowler_id)) {
             match.player_stats.push(bowlerStats);
         }
+
+        // Calculate and update total scores
+        match.team1_score = match.player_stats.filter(p => match.team1_players?.includes(p.player_id)).reduce((acc, p) => acc + p.runs_scored, 0);
+        match.team2_score = match.player_stats.filter(p => match.team2_players?.includes(p.player_id)).reduce((acc, p) => acc + p.runs_scored, 0);
+
         await match.save();
 
         res.status(201).send('Over added successfully');
