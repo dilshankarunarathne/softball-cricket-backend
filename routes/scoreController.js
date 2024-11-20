@@ -57,6 +57,8 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
     const { match_id, over_number, bowler_id, balls } = req.body;
     const token = req.headers.authorization.split(' ')[1];
 
+    console.log('request body:', req.body);
+
     if (!mongoose.Types.ObjectId.isValid(match_id)) {
         console.log('Invalid match_id'); // Add this line
         return res.status(400).send('Invalid match_id');
@@ -71,7 +73,13 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
     }
 
     const ballsArray = JSON.parse(balls);
+    let totalRuns = 0;
+    let totalWickets = 0;
+    let totalExtras = 0;
+
     for (const ball of ballsArray) {
+        console.log('ball:', ball);
+
         if (ball.result !== 'wicket' && ball.result !== 'none' && ball.result !== 'Extra Run' && ball.runs_to && !mongoose.Types.ObjectId.isValid(ball.runs_to)) {
             console.log('Invalid runs_to'); // Add this line
             return res.status(400).send('Invalid runs_to');
@@ -79,7 +87,19 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
         if (ball.runs_to === '') {
             ball.runs_to = null; // Convert empty string to null
         }
+
+        if (ball.result === 'wicket') {
+            totalWickets += 1;
+        } else if (ball.result === 'Extra Run') {
+            totalExtras += 1;
+        } else {
+            totalRuns += ball.runs || 0;
+        }
     }
+
+    console.log('Total Runs:', totalRuns);
+    console.log('Total Wickets:', totalWickets);
+    console.log('Total Extras:', totalExtras);
 
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
@@ -112,6 +132,9 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
             return res.status(404).send('Match not found');
         }
 
+        const team1_players = match.team1_players || [];
+        const team2_players = match.team2_players || [];
+
         console.log('bowler_id:', bowler_id); 
         if (!mongoose.Types.ObjectId.isValid(bowler_id)) {
             console.log('Invalid bowler_id'); 
@@ -125,22 +148,24 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
             return res.status(404).send('Bowler not found');
         }
 
+        match.player_stats = match.player_stats || [];
+
         for (const ball of ballsArray) {
             if (ball.result === 'wicket') {
-                if (match.team1_players.includes(bowler_id)) {
+                if (team1_players.includes(bowler_id)) {
                     match.team2_wickets += 1;
                 } else {
                     match.team1_wickets += 1;
                 }
             } else if (ball.result === 'Extra Run') {
-                if (match.team1_players.includes(bowler_id)) {
+                if (team1_players.includes(bowler_id)) {
                     match.team2_score += 1;
                 } else {
                     match.team1_score += 1;
                 }
             } else {
                 const runs = ball.runs || 0;
-                if (match.team1_players.includes(bowler_id)) {
+                if (team1_players.includes(bowler_id)) {
                     match.team2_score += runs;
                 } else {
                     match.team1_score += runs;
@@ -149,26 +174,38 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
                     const batsman = await Player.findById(ball.runs_to);
                     if (batsman) {
                         // Update match-specific batsman statistics
-                        const batsmanStats = match.player_stats.id(ball.runs_to) || { player_id: ball.runs_to, runs_scored: 0 };
-                        batsmanStats.runs_scored += runs;
-                        if (!match.player_stats.id(ball.runs_to)) {
+                        let batsmanStats = match.player_stats.find(p => p.player_id.toString() === ball.runs_to);
+                        if (!batsmanStats) {
+                            batsmanStats = { player_id: ball.runs_to, runs_scored: 0 };
                             match.player_stats.push(batsmanStats);
                         }
+                        batsmanStats.runs_scored += runs;
                     }
                 }
             }
         }
 
         // Update match-specific bowler statistics
-        const bowlerStats = match.player_stats.id(bowler_id) || { player_id: bowler_id, wickets_taken: 0, overs_bowled: 0 };
-        bowlerStats.overs_bowled += 1;
-        if (!match.player_stats.id(bowler_id)) {
+        let bowlerStats = match.player_stats.find(p => p.player_id.toString() === bowler_id);
+        if (!bowlerStats) {
+            bowlerStats = { player_id: bowler_id, wickets_taken: 0, overs_bowled: 0 };
             match.player_stats.push(bowlerStats);
         }
+        bowlerStats.overs_bowled += 1;
 
         // Calculate and update total scores
-        match.team1_score = match.player_stats.filter(p => match.team1_players.includes(p.player_id)).reduce((acc, p) => acc + p.runs_scored, 0);
-        match.team2_score = match.player_stats.filter(p => match.team2_players.includes(p.player_id)).reduce((acc, p) => acc + p.runs_scored, 0);
+        match.team1_score = match.player_stats.filter(p => team1_players.includes(p.player_id.toString())).reduce((acc, p) => acc + p.runs_scored, 0);
+        match.team2_score = match.player_stats.filter(p => team2_players.includes(p.player_id.toString())).reduce((acc, p) => acc + p.runs_scored, 0);
+
+        // Add extras to the total scores
+        if (team1_players.includes(bowler_id)) {
+            match.team2_score += totalExtras;
+        } else {
+            match.team1_score += totalExtras;
+        }
+
+        console.log('Updated team1_score:', match.team1_score);
+        console.log('Updated team2_score:', match.team2_score);
 
         await match.save();
 
@@ -233,17 +270,11 @@ router.post('/add-ball', authMiddleware, upload.none(), async (req, res) => {
         const bowler = await Player.findById(bowler_id);
 
         for (const ball of over.balls) {
+            console.log('ball:', ball);
             if (ball.result === 'wicket') {
                 if (match.team1_players.includes(bowler_id)) {
                     match.team2_wickets += 1;
                 } else {
-                    match.team1_wickets += 1;
-                }
-            } else if (ball.result === 'Extra Run') {
-                if (match.team1_players.includes(bowler_id)) {
-                    match.team2_score += 1;
-                } else {
-                    match.team1_score += 1;
                 }
             } else {
                 const runs = ball.runs || 0;
@@ -277,6 +308,9 @@ router.post('/add-ball', authMiddleware, upload.none(), async (req, res) => {
         match.team1_score = match.player_stats.filter(p => match.team1_players.includes(p.player_id)).reduce((acc, p) => acc + p.runs_scored, 0);
         match.team2_score = match.player_stats.filter(p => match.team2_players.includes(p.player_id)).reduce((acc, p) => acc + p.runs_scored, 0);
 
+        console.log('Updated team1_score:', match.team1_score);
+        console.log('Updated team2_score:', match.team2_score);
+
         await match.save();
 
         res.status(201).send('Ball added successfully');
@@ -309,17 +343,22 @@ router.get('/current/:match_id', authMiddleware, async (req, res) => {
             return res.status(404).send('Match not found');
         }
 
+        const team1_players = match.team1_players || [];
+        const team2_players = match.team2_players || [];
+
         const response = {
             team1_score: match.team1_score,
             team2_score: match.team2_score,
             team1_wickets: match.team1_wickets,
             team2_wickets: match.team2_wickets,
-            team1_overs: score.overs.filter(o => match.team1_players.includes(o.bowler_id)).length,
-            team2_overs: score.overs.filter(o => match.team2_players.includes(o.bowler_id)).length,
+            team1_overs: score.overs.filter(o => team1_players.includes(o.bowler_id)).length,
+            team2_overs: score.overs.filter(o => team2_players.includes(o.bowler_id)).length,
             overs: score.overs
         };
 
         console.log('Current score fetched successfully'); // Add this line
+        console.log('Response:', response);
+
         res.status(200).json(response);
     } catch (error) {
         console.error('Error in GET /current/:match_id:', error);
@@ -471,6 +510,9 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
         // Calculate and update total scores
         newMatch.team1_score = newMatch.player_stats.filter(p => newMatch.team1_players.includes(p.player_id)).reduce((acc, p) => acc + p.runs_scored, 0);
         newMatch.team2_score = newMatch.player_stats.filter(p => newMatch.team2_players.includes(p.player_id)).reduce((acc, p) => acc + p.runs_scored, 0);
+
+        console.log('Updated team1_score:', newMatch.team1_score);
+        console.log('Updated team2_score:', newMatch.team2_score);
 
         await newMatch.save();
 
