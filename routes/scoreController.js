@@ -94,12 +94,12 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
         }
 
         // TODO: calculate match score/wickets
+        const battingTeam = match.bat_first;
+        const battingTeamId = battingTeam === 'team1' ? match.team1 : match.team2;
+
         if (ball.result === 'wicket') {
             // mark wicket of batsman, batting team wicket count
             // check the team of batting and update the wickets
-            const battingTeam = match.bat_first;
-
-            const battingTeamId = battingTeam === 'team1' ? match.team1 : match.team2;
             console.log('wicket fallen of team: ', battingTeamId);
 
             if (battingTeamId.toString() === match.team1.toString()) {
@@ -108,7 +108,15 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
                 match.team2_wickets += 1;
             }
         } else if (ball.result === 'Extra Run') {
-            totalExtras += 1;
+            // find the bat team and update the score
+            console.log('Extra run scored by team: ', battingTeamId);
+            if (battingTeamId.toString() === match.team1.toString()) {
+                console.log('extra run scored by team1');
+                match.team1_score += 1;
+            } else if (battingTeamId.toString() === match.team2.toString()) {
+                console.log('extra run scored by team2');
+                match.team2_score += 1;
+            }
         } else {
             totalRuns += ball.runs || 0;
         }
@@ -116,8 +124,6 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
         // save the match data to database 
         await match.save();
     }
-    
-    // TODO: save match score/wickets
 
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
