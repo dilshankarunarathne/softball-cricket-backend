@@ -32,4 +32,23 @@ const MatchSchema = new mongoose.Schema({
   player_stats: [PlayerStatsSchema]
 });
 
+MatchSchema.statics.updateStatuses = async function() {
+  const matches = await this.find();
+  const currentDate = new Date().toDateString();
+
+  matches.forEach(async (match) => {
+    const matchDate = new Date(match.date).toDateString();
+
+    if (currentDate === matchDate) {
+      match.status = 'live';
+    } else if (new Date() < new Date(match.date)) {
+      match.status = 'ended';
+    } else if (new Date() > new Date(match.date)) {
+      match.status = 'ended';
+    }
+
+    await match.save();
+  });
+};
+
 module.exports = mongoose.model('Match', MatchSchema);
