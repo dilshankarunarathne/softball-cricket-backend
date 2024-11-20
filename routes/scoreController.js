@@ -78,8 +78,6 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
     let totalExtras = 0;
 
     for (const ball of ballsArray) {
-        console.log('ball:', ball);
-
         if (ball.result !== 'wicket' && ball.result !== 'none' && ball.result !== 'Extra Run' && ball.runs_to && !mongoose.Types.ObjectId.isValid(ball.runs_to)) {
             console.log('Invalid runs_to'); // Add this line
             return res.status(400).send('Invalid runs_to');
@@ -88,18 +86,38 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
             ball.runs_to = null; // Convert empty string to null
         }
 
+        let match = await Match.findOne({ _id: match_id });
+
+        if (!match.team1) {
+            console.log('Team players not defined'); // Add this line
+            return res.status(400).send('Team players not defined');
+        }
+
+        // TODO: calculate match score/wickets
         if (ball.result === 'wicket') {
-            totalWickets += 1;
+            // mark wicket of batsman, batting team wicket count
+            // check the team of batting and update the wickets
+            const battingTeam = match.bat_first;
+
+            const battingTeamId = battingTeam === 'team1' ? match.team1 : match.team2;
+            console.log('wicket fallen of team: ', battingTeamId);
+
+            if (battingTeamId.toString() === match.team1.toString()) {
+                match.team1_wickets += 1;
+            } else if (battingTeamId.toString() === match.team2.toString()) {
+                match.team2_wickets += 1;
+            }
         } else if (ball.result === 'Extra Run') {
             totalExtras += 1;
         } else {
             totalRuns += ball.runs || 0;
         }
-    }
 
-    console.log('Total Runs:', totalRuns);
-    console.log('Total Wickets:', totalWickets);
-    console.log('Total Extras:', totalExtras);
+        // save the match data to database 
+        await match.save();
+    }
+    
+    // TODO: save match score/wickets
 
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
@@ -135,14 +153,12 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
         const team1_players = match.team1_players || [];
         const team2_players = match.team2_players || [];
 
-        console.log('bowler_id:', bowler_id); 
         if (!mongoose.Types.ObjectId.isValid(bowler_id)) {
             console.log('Invalid bowler_id'); 
             return res.status(400).send('Invalid bowler_id');
         }
 
         const bowler = await Player.findById(bowler_id); 
-        console.log('bowler:', bowler); 
         if (!bowler) {
             console.log('Bowler not found');
             return res.status(404).send('Bowler not found');
@@ -150,62 +166,13 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
 
         match.player_stats = match.player_stats || [];
 
-        for (const ball of ballsArray) {
-            if (ball.result === 'wicket') {
-                if (team1_players.includes(bowler_id)) {
-                    match.team2_wickets += 1;
-                } else {
-                    match.team1_wickets += 1;
-                }
-            } else if (ball.result === 'Extra Run') {
-                if (team1_players.includes(bowler_id)) {
-                    match.team2_score += 1;
-                } else {
-                    match.team1_score += 1;
-                }
-            } else {
-                const runs = ball.runs || 0;
-                if (team1_players.includes(bowler_id)) {
-                    match.team2_score += runs;
-                } else {
-                    match.team1_score += runs;
-                }
-                if (ball.runs_to && mongoose.Types.ObjectId.isValid(ball.runs_to)) {
-                    const batsman = await Player.findById(ball.runs_to);
-                    if (batsman) {
-                        // Update match-specific batsman statistics
-                        let batsmanStats = match.player_stats.find(p => p.player_id.toString() === ball.runs_to);
-                        if (!batsmanStats) {
-                            batsmanStats = { player_id: ball.runs_to, runs_scored: 0 };
-                            match.player_stats.push(batsmanStats);
-                        }
-                        batsmanStats.runs_scored += runs;
-                    }
-                }
-            }
-        }
-
-        // Update match-specific bowler statistics
+        // TODO Update match-specific bowler statistics
         let bowlerStats = match.player_stats.find(p => p.player_id.toString() === bowler_id);
         if (!bowlerStats) {
             bowlerStats = { player_id: bowler_id, wickets_taken: 0, overs_bowled: 0 };
             match.player_stats.push(bowlerStats);
         }
         bowlerStats.overs_bowled += 1;
-
-        // Calculate and update total scores
-        match.team1_score = match.player_stats.filter(p => team1_players.includes(p.player_id.toString())).reduce((acc, p) => acc + p.runs_scored, 0);
-        match.team2_score = match.player_stats.filter(p => team2_players.includes(p.player_id.toString())).reduce((acc, p) => acc + p.runs_scored, 0);
-
-        // Add extras to the total scores
-        if (team1_players.includes(bowler_id)) {
-            match.team2_score += totalExtras;
-        } else {
-            match.team1_score += totalExtras;
-        }
-
-        console.log('Updated team1_score:', match.team1_score);
-        console.log('Updated team2_score:', match.team2_score);
 
         await match.save();
 
@@ -275,6 +242,13 @@ router.post('/add-ball', authMiddleware, upload.none(), async (req, res) => {
                 if (match.team1_players.includes(bowler_id)) {
                     match.team2_wickets += 1;
                 } else {
+                    match.team1_wickets += 1;
+                }
+            } else if (ball.result === 'Extra Run') {
+                if (match.team1_players.includes(bowler_id)) {
+                    match.team2_score += 1;
+                } else {
+                    match.team1_score += 1;
                 }
             } else {
                 const runs = ball.runs || 0;
