@@ -22,6 +22,9 @@ router.post('/create', authMiddleware, upload.none(), async (req, res) => {
 
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
+
+        console.log('decoded data: ', decoded); // Add this line
+
         if (decoded.user_type !== 'temp-admin') {
             console.log('Unauthorized user'); // Add this line
             return res.status(403).send('Only admins can create match-scoring entities');
@@ -69,7 +72,7 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
 
     const ballsArray = JSON.parse(balls);
     for (const ball of ballsArray) {
-        if (ball.result !== 'wicket' && ball.result !== 'none' && ball.runs_to && !mongoose.Types.ObjectId.isValid(ball.runs_to)) {
+        if (ball.result !== 'wicket' && ball.result !== 'none' && ball.result !== 'Extra Run' && ball.runs_to && !mongoose.Types.ObjectId.isValid(ball.runs_to)) {
             console.log('Invalid runs_to'); // Add this line
             return res.status(400).send('Invalid runs_to');
         }
@@ -130,6 +133,12 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
                 } else {
                     match.team1_wickets += 1;
                 }
+            } else if (ball.result === 'Extra Run') {
+                if (match.team1 === bowler.team) {
+                    match.team2_score += 1;
+                } else {
+                    match.team1_score += 1;
+                }
             } else {
                 const runs = ball.runs || 0;
                 if (match.team1 === bowler.team) {
@@ -189,7 +198,7 @@ router.post('/add-ball', authMiddleware, upload.none(), async (req, res) => {
         console.log('Invalid ball data'); // Add this line
         return res.status(400).send('Invalid ball data');
     }
-    if (ball.result !== 'wicket' && ball.result !== 'none' && ball.runs_to && !mongoose.Types.ObjectId.isValid(ball.runs_to)) {
+    if (ball.result !== 'wicket' && ball.result !== 'none' && ball.result !== 'Extra Run' && ball.runs_to && !mongoose.Types.ObjectId.isValid(ball.runs_to)) {
         console.log('Invalid runs_to'); // Add this line
         return res.status(400).send('Invalid runs_to');
     }
@@ -229,6 +238,12 @@ router.post('/add-ball', authMiddleware, upload.none(), async (req, res) => {
                 match.team2_wickets += 1;
             } else {
                 match.team1_wickets += 1;
+            }
+        } else if (ball.result === 'Extra Run') {
+            if (match.team1 === bowler.team) {
+                match.team2_score += 1;
+            } else {
+                match.team1_score += 1;
             }
         } else {
             const runs = ball.runs || 0;
@@ -324,7 +339,7 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
 
     const ballsArray = JSON.parse(balls);
     for (const ball of ballsArray) {
-        if (ball.result !== 'wicket' && ball.result !== 'none' && ball.runs_to && !mongoose.Types.ObjectId.isValid(ball.runs_to)) {
+        if (ball.result !== 'wicket' && ball.result !== 'none' && ball.result !== 'Extra Run' && ball.runs_to && !mongoose.Types.ObjectId.isValid(ball.runs_to)) {
             console.log('Invalid runs_to'); // Add this line
             return res.status(400).send('Invalid runs_to');
         }
@@ -356,6 +371,12 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
                     oldMatch.team2_wickets -= 1;
                 } else {
                     oldMatch.team1_wickets -= 1;
+                }
+            } else if (ball.result === 'Extra Run') {
+                if (oldMatch.team1 === oldBowler.team) {
+                    oldMatch.team2_score -= 1;
+                } else {
+                    oldMatch.team1_score -= 1;
                 }
             } else {
                 const runs = ball.runs || 0;
@@ -404,6 +425,12 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
                     newMatch.team2_wickets += 1;
                 } else {
                     newMatch.team1_wickets += 1;
+                }
+            } else if (ball.result === 'Extra Run') {
+                if (newMatch.team1 === newBowler.team) {
+                    newMatch.team2_score += 1;
+                } else {
+                    newMatch.team1_score += 1;
                 }
             } else {
                 const runs = ball.runs || 0;
