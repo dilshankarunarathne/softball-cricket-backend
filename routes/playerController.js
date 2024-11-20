@@ -11,6 +11,8 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
     const { name, team, batting_style, bowling_style, phone_number, email, date_of_birth, first_name, last_name, match_id } = req.body;
     const token = req.headers.authorization.split(' ')[1];
 
+    console.log(req.body);
+
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
 
