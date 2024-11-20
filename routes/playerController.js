@@ -7,7 +7,7 @@ const upload = multer();
 const authMiddleware = require('../middleware/authMiddleware');
 
 router.post('/', authMiddleware, upload.none(), async (req, res) => {
-    const { name, team, batting_style, bowling_style, phone_number, email, date_of_birth, first_name, last_name } = req.body;
+    const { name, team, batting_style, bowling_style, phone_number, email, date_of_birth, first_name, last_name, match_id } = req.body;
     const token = req.headers.authorization.split(' ')[1];
 
     try {
@@ -25,10 +25,26 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
             email: email || null,
             date_of_birth: date_of_birth ? new Date(date_of_birth) : null,
             first_name: first_name || null,
-            last_name: last_name || null
+            last_name: last_name || null,
+            match_id: match_id || null // Add this line
         });
         await player.save();
         res.status(201).send('Player created successfully');
+    } catch (error) {
+        console.log(error);
+        res.status(500).send('Internal server error');
+    }
+});
+
+// Get players by match ID
+router.get('/match/:matchId', async (req, res) => {
+    try {
+        const { matchId } = req.params;
+        const players = await Player.find({ match_id: matchId });
+        if (players.length === 0) {
+            console.log(`No players found for match ID: ${matchId}`);
+        }
+        res.send(players);
     } catch (error) {
         console.log(error);
         res.status(500).send('Internal server error');

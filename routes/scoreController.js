@@ -24,6 +24,11 @@ router.post('/create', authMiddleware, upload.none(), async (req, res) => {
             return res.status(403).send('Only admins can create match-scoring entities');
         }
 
+        const existingScore = await Score.findOne({ match_id });
+        if (existingScore) {
+            return res.status(400).send('Match-scoring entity already created');
+        }
+
         const score = new Score({
             match_id,
             balls_per_over,
@@ -34,6 +39,89 @@ router.post('/create', authMiddleware, upload.none(), async (req, res) => {
         res.status(201).send('Match-scoring entity created successfully');
     } catch (error) {
         console.error('Error in POST /create:', error);
+        res.status(500).send('Internal server error');
+    }
+});
+
+// Endpoint to save an over
+router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
+    const { match_id, over_number, bowler_id, balls } = req.body;
+    const token = req.headers.authorization.split(' ')[1];
+
+    if (!mongoose.Types.ObjectId.isValid(match_id)) {
+        return res.status(400).send('Invalid match_id');
+    }
+    if (!mongoose.Types.ObjectId.isValid(bowler_id)) {
+        return res.status(400).send('Invalid bowler_id');
+    }
+    if (!Array.isArray(JSON.parse(balls))) {
+        return res.status(400).send('Invalid balls format');
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.SECRET_KEY);
+        if (decoded.user_type !== 'temp-admin') {
+            return res.status(403).send('Only admins can save overs');
+        }
+
+        const score = await Score.findOne({ match_id });
+        if (!score) {
+            return res.status(404).send('Match-scoring entity not found');
+        }
+
+        let over = score.overs.find(o => o.over_number === over_number);
+        if (!over) {
+            over = { over_number, balls: JSON.parse(balls) };
+            score.overs.push(over);
+        } else {
+            over.balls = JSON.parse(balls);
+        }
+
+        await score.save();
+
+        // Update match statistics
+        const match = await Match.findById(match_id);
+        const bowler = await Player.findById(bowler_id);
+
+        for (const ball of JSON.parse(balls)) {
+            if (ball.result === 'wicket') {
+                if (match.team1 === bowler.team) {
+                    match.team2_wickets += 1;
+                } else {
+                    match.team1_wickets += 1;
+                }
+            } else {
+                const runs = ball.runs || 0;
+                if (match.team1 === bowler.team) {
+                    match.team2_score += runs;
+                } else {
+                    match.team1_score += runs;
+                }
+                if (ball.runs_to && mongoose.Types.ObjectId.isValid(ball.runs_to)) {
+                    const batsman = await Player.findById(ball.runs_to);
+                    if (batsman) {
+                        // Update match-specific batsman statistics
+                        const batsmanStats = match.player_stats.id(ball.runs_to) || { player_id: ball.runs_to, runs_scored: 0 };
+                        batsmanStats.runs_scored += runs;
+                        if (!match.player_stats.id(ball.runs_to)) {
+                            match.player_stats.push(batsmanStats);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update match-specific bowler statistics
+        const bowlerStats = match.player_stats.id(bowler_id) || { player_id: bowler_id, wickets_taken: 0, overs_bowled: 0 };
+        bowlerStats.overs_bowled += 1;
+        if (!match.player_stats.id(bowler_id)) {
+            match.player_stats.push(bowlerStats);
+        }
+        await match.save();
+
+        res.status(201).send('Over added successfully');
+    } catch (error) {
+        console.error('Error in POST /add-over:', error);
         res.status(500).send('Internal server error');
     }
 });

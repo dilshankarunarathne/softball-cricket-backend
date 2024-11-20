@@ -14,6 +14,7 @@ const PlayerSchema = new mongoose.Schema({
   matches_played: { type: Number, default: 0 },
   points: { type: Number, default: 0 },
   rating: { type: Number, default: 0 },
+  match_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Match' } // Add this line
 });
 
 module.exports = mongoose.model('Player', PlayerSchema);
