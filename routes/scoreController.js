@@ -11,21 +11,25 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 // Endpoint to create a match-scoring entity
 router.post('/create', authMiddleware, upload.none(), async (req, res) => {
+    console.log('POST /create called'); // Add this line
     const { match_id, balls_per_over } = req.body;
     const token = req.headers.authorization.split(' ')[1];
 
     if (!mongoose.Types.ObjectId.isValid(match_id)) {
+        console.log('Invalid match_id'); // Add this line
         return res.status(400).send('Invalid match_id');
     }
 
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
         if (decoded.user_type !== 'temp-admin') {
+            console.log('Unauthorized user'); // Add this line
             return res.status(403).send('Only admins can create match-scoring entities');
         }
 
         const existingScore = await Score.findOne({ match_id });
         if (existingScore) {
+            console.log('Match-scoring entity already created'); // Add this line
             return res.status(400).send('Match-scoring entity already created');
         }
 
@@ -36,6 +40,7 @@ router.post('/create', authMiddleware, upload.none(), async (req, res) => {
         });
 
         await score.save();
+        console.log('Match-scoring entity created successfully'); // Add this line
         res.status(201).send('Match-scoring entity created successfully');
     } catch (error) {
         console.error('Error in POST /create:', error);
@@ -45,27 +50,33 @@ router.post('/create', authMiddleware, upload.none(), async (req, res) => {
 
 // Endpoint to save an over
 router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
+    console.log('POST /add-over called'); // Add this line
     const { match_id, over_number, bowler_id, balls } = req.body;
     const token = req.headers.authorization.split(' ')[1];
 
     if (!mongoose.Types.ObjectId.isValid(match_id)) {
+        console.log('Invalid match_id'); // Add this line
         return res.status(400).send('Invalid match_id');
     }
     if (!mongoose.Types.ObjectId.isValid(bowler_id)) {
+        console.log('Invalid bowler_id'); // Add this line
         return res.status(400).send('Invalid bowler_id');
     }
     if (!Array.isArray(JSON.parse(balls))) {
+        console.log('Invalid balls format'); // Add this line
         return res.status(400).send('Invalid balls format');
     }
 
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
         if (decoded.user_type !== 'temp-admin') {
+            console.log('Unauthorized user'); // Add this line
             return res.status(403).send('Only admins can save overs');
         }
 
         const score = await Score.findOne({ match_id });
         if (!score) {
+            console.log('Match-scoring entity not found'); // Add this line
             return res.status(404).send('Match-scoring entity not found');
         }
 
@@ -78,6 +89,7 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
         }
 
         await score.save();
+        console.log('Over saved successfully'); // Add this line
 
         // Update match statistics
         const match = await Match.findById(match_id);
@@ -128,27 +140,33 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
 
 // Endpoint to add ball-by-ball scoring
 router.post('/add-ball', authMiddleware, upload.none(), async (req, res) => {
+    console.log('POST /add-ball called'); // Add this line
     const { match_id, over_number, bowler_id, ball } = req.body;
     const token = req.headers.authorization.split(' ')[1];
 
     if (!mongoose.Types.ObjectId.isValid(match_id)) {
+        console.log('Invalid match_id'); // Add this line
         return res.status(400).send('Invalid match_id');
     }
     if (!mongoose.Types.ObjectId.isValid(bowler_id)) {
+        console.log('Invalid bowler_id'); // Add this line
         return res.status(400).send('Invalid bowler_id');
     }
     if (!ball || !ball.result) {
+        console.log('Invalid ball data'); // Add this line
         return res.status(400).send('Invalid ball data');
     }
 
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
         if (decoded.user_type !== 'temp-admin') {
+            console.log('Unauthorized user'); // Add this line
             return res.status(403).send('Only admins can add ball-by-ball scoring');
         }
 
         const score = await Score.findOne({ match_id });
         if (!score) {
+            console.log('Match-scoring entity not found'); // Add this line
             return res.status(404).send('Match-scoring entity not found');
         }
 
@@ -160,6 +178,7 @@ router.post('/add-ball', authMiddleware, upload.none(), async (req, res) => {
 
         over.balls.push(ball);
         await score.save();
+        console.log('Ball added successfully'); // Add this line
 
         // Update match statistics
         const match = await Match.findById(match_id);
@@ -208,15 +227,18 @@ router.post('/add-ball', authMiddleware, upload.none(), async (req, res) => {
 
 // Endpoint to fetch players for a match
 router.get('/players/:match_id', authMiddleware, async (req, res) => {
+    console.log('GET /players/:match_id called'); // Add this line
     const { match_id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(match_id)) {
+        console.log('Invalid match_id'); // Add this line
         return res.status(400).send('Invalid match_id');
     }
 
     try {
         const match = await Match.findById(match_id);
         if (!match) {
+            console.log('Match not found'); // Add this line
             return res.status(404).send('Match not found');
         }
 
@@ -224,6 +246,7 @@ router.get('/players/:match_id', authMiddleware, async (req, res) => {
         const team2Players = await Player.find({ team: match.team2 });
 
         const combinedPlayers = [...team1Players, ...team2Players];
+        console.log('Players fetched successfully'); // Add this line
 
         res.status(200).json(combinedPlayers);
     } catch (error) {
@@ -233,27 +256,33 @@ router.get('/players/:match_id', authMiddleware, async (req, res) => {
 });
 
 router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
+    console.log('PUT /:id called'); // Add this line
     const { match_id, over_number, balls_per_over, bowler_id, balls } = req.body;
     const token = req.headers.authorization.split(' ')[1];
 
     if (!mongoose.Types.ObjectId.isValid(match_id)) {
+        console.log('Invalid match_id'); // Add this line
         return res.status(400).send('Invalid match_id');
     }
     if (!mongoose.Types.ObjectId.isValid(bowler_id)) {
+        console.log('Invalid bowler_id'); // Add this line
         return res.status(400).send('Invalid bowler_id');
     }
     if (!Array.isArray(JSON.parse(balls))) {
+        console.log('Invalid balls format'); // Add this line
         return res.status(400).send('Invalid balls format');
     }
 
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
         if (decoded.user_type !== 'temp-admin') {
+            console.log('Unauthorized user'); // Add this line
             return res.status(403).send('Only admins can update score details');
         }
 
         const score = await Score.findById(req.params.id);
         if (!score) {
+            console.log('Score not found'); // Add this line
             return res.status(404).send('Score not found');
         }
 
@@ -303,6 +332,7 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
         score.balls = balls ? JSON.parse(balls) : score.balls;
 
         await score.save();
+        console.log('Score updated successfully'); // Add this line
 
         // Update new statistics
         const newMatch = await Match.findById(score.match_id);
