@@ -35,7 +35,7 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
         }
 
         const imageUrl = req.file ? `/uploads/${req.file.filename}` : '';
-        const news = new News({ image: imageUrl, description });
+        const news = new News({ image: imageUrl || undefined, description });
         await news.save();
         res.status(201).send('News item created successfully');
     } catch (error) {
