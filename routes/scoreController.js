@@ -9,53 +9,95 @@ const multer = require('multer');
 const upload = multer();
 const authMiddleware = require('../middleware/authMiddleware');
 
-router.post('/', authMiddleware, upload.none(), async (req, res) => {
-    const { match_id, over_number, balls_per_over, bowler_id, balls } = req.body;
+// Endpoint to create a match-scoring entity
+router.post('/create', authMiddleware, upload.none(), async (req, res) => {
+    const { match_id, balls_per_over } = req.body;
     const token = req.headers.authorization.split(' ')[1];
+
+    if (!mongoose.Types.ObjectId.isValid(match_id)) {
+        return res.status(400).send('Invalid match_id');
+    }
 
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
         if (decoded.user_type !== 'temp-admin') {
-            return res.status(403).send('Only admins can set score details');
+            return res.status(403).send('Only admins can create match-scoring entities');
         }
 
-        const parsedBalls = JSON.parse(balls);
         const score = new Score({
             match_id,
-            over_number,
             balls_per_over,
-            bowler_id,
-            balls: parsedBalls
+            overs: []
         });
 
+        await score.save();
+        res.status(201).send('Match-scoring entity created successfully');
+    } catch (error) {
+        console.error('Error in POST /create:', error);
+        res.status(500).send('Internal server error');
+    }
+});
+
+// Endpoint to add ball-by-ball scoring
+router.post('/add-ball', authMiddleware, upload.none(), async (req, res) => {
+    const { match_id, over_number, bowler_id, ball } = req.body;
+    const token = req.headers.authorization.split(' ')[1];
+
+    if (!mongoose.Types.ObjectId.isValid(match_id)) {
+        return res.status(400).send('Invalid match_id');
+    }
+    if (!mongoose.Types.ObjectId.isValid(bowler_id)) {
+        return res.status(400).send('Invalid bowler_id');
+    }
+    if (!ball || !ball.result) {
+        return res.status(400).send('Invalid ball data');
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.SECRET_KEY);
+        if (decoded.user_type !== 'temp-admin') {
+            return res.status(403).send('Only admins can add ball-by-ball scoring');
+        }
+
+        const score = await Score.findOne({ match_id });
+        if (!score) {
+            return res.status(404).send('Match-scoring entity not found');
+        }
+
+        let over = score.overs.find(o => o.over_number === over_number);
+        if (!over) {
+            over = { over_number, balls: [] };
+            score.overs.push(over);
+        }
+
+        over.balls.push(ball);
         await score.save();
 
         // Update match statistics
         const match = await Match.findById(match_id);
+        const bowler = await Player.findById(bowler_id);
 
-        for (const ball of parsedBalls) {
-            if (ball.result === 'wicket') {
-                if (match.team1 === bowler.team) {
-                    match.team2_wickets += 1;
-                } else {
-                    match.team1_wickets += 1;
-                }
+        if (ball.result === 'wicket') {
+            if (match.team1 === bowler.team) {
+                match.team2_wickets += 1;
             } else {
-                const runs = ball.runs || 0;
-                if (match.team1 === bowler.team) {
-                    match.team2_score += runs;
-                } else {
-                    match.team1_score += runs;
-                }
-                if (ball.runs_to && mongoose.Types.ObjectId.isValid(ball.runs_to)) {
-                    const batsman = await Player.findById(ball.runs_to);
-                    if (batsman) {
-                        // Update match-specific batsman statistics
-                        const batsmanStats = match.player_stats.id(ball.runs_to) || { player_id: ball.runs_to, runs_scored: 0 };
-                        batsmanStats.runs_scored += runs;
-                        if (!match.player_stats.id(ball.runs_to)) {
-                            match.player_stats.push(batsmanStats);
-                        }
+                match.team1_wickets += 1;
+            }
+        } else {
+            const runs = ball.runs || 0;
+            if (match.team1 === bowler.team) {
+                match.team2_score += runs;
+            } else {
+                match.team1_score += runs;
+            }
+            if (ball.runs_to && mongoose.Types.ObjectId.isValid(ball.runs_to)) {
+                const batsman = await Player.findById(ball.runs_to);
+                if (batsman) {
+                    // Update match-specific batsman statistics
+                    const batsmanStats = match.player_stats.id(ball.runs_to) || { player_id: ball.runs_to, runs_scored: 0 };
+                    batsmanStats.runs_scored += runs;
+                    if (!match.player_stats.id(ball.runs_to)) {
+                        match.player_stats.push(batsmanStats);
                     }
                 }
             }
@@ -69,9 +111,9 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
         }
         await match.save();
 
-        res.sendStatus(201);
+        res.status(201).send('Ball added successfully');
     } catch (error) {
-        console.error('Error in POST /scores:', error);
+        console.error('Error in POST /add-ball:', error);
         res.status(500).send('Internal server error');
     }
 });
@@ -79,6 +121,16 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
 router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
     const { match_id, over_number, balls_per_over, bowler_id, balls } = req.body;
     const token = req.headers.authorization.split(' ')[1];
+
+    if (!mongoose.Types.ObjectId.isValid(match_id)) {
+        return res.status(400).send('Invalid match_id');
+    }
+    if (!mongoose.Types.ObjectId.isValid(bowler_id)) {
+        return res.status(400).send('Invalid bowler_id');
+    }
+    if (!Array.isArray(JSON.parse(balls))) {
+        return res.status(400).send('Invalid balls format');
+    }
 
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
@@ -93,6 +145,7 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
 
         // Revert old statistics
         const oldMatch = await Match.findById(score.match_id);
+        const oldBowler = await Player.findById(score.bowler_id); // Add this line to fetch the old bowler
 
         for (const ball of score.balls) {
             if (ball.result === 'wicket') {
@@ -139,6 +192,7 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
 
         // Update new statistics
         const newMatch = await Match.findById(score.match_id);
+        const newBowler = await Player.findById(score.bowler_id); // Add this line to fetch the new bowler
 
         for (const ball of score.balls) {
             if (ball.result === 'wicket') {
