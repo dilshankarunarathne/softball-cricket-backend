@@ -6,9 +6,8 @@ const multer = require('multer');
 const upload = multer();
 const authMiddleware = require('../middleware/authMiddleware');
 
-// Create a new player
 router.post('/', authMiddleware, upload.none(), async (req, res) => {
-    const { name, team } = req.body;
+    const { name, team, batting_style, bowling_style, phone_number, email, date_of_birth, first_name, last_name } = req.body;
     const token = req.headers.authorization.split(' ')[1];
 
     try {
@@ -17,7 +16,17 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
             return res.status(403).send('Only admins can create players');
         }
 
-        const player = new Player({ name, team });
+        const player = new Player({
+            name: name || null,
+            team: team || null,
+            batting_style: batting_style || null,
+            bowling_style: bowling_style || null,
+            phone_number: phone_number || null,
+            email: email || null,
+            date_of_birth: date_of_birth ? new Date(date_of_birth) : null,
+            first_name: first_name || null,
+            last_name: last_name || null
+        });
         await player.save();
         res.status(201).send('Player created successfully');
     } catch (error) {
@@ -26,7 +35,6 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
     }
 });
 
-// Get all players
 router.get('/all', async (req, res) => {
     try {
         const players = await Player.find();
@@ -51,9 +59,8 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Update a player by ID
 router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
-    const { name, team, runs_scored, wickets_taken, overs_bowled } = req.body;
+    const { name, team, runs_scored, wickets_taken, overs_bowled, batting_style, bowling_style, phone_number, email, date_of_birth, first_name, last_name } = req.body;
     const token = req.headers.authorization.split(' ')[1];
 
     try {
@@ -72,6 +79,13 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
         player.runs_scored = runs_scored !== undefined ? runs_scored : player.runs_scored;
         player.wickets_taken = wickets_taken !== undefined ? wickets_taken : player.wickets_taken;
         player.overs_bowled = overs_bowled !== undefined ? overs_bowled : player.overs_bowled;
+        player.batting_style = batting_style || player.batting_style;
+        player.bowling_style = bowling_style || player.bowling_style;
+        player.phone_number = phone_number || player.phone_number;
+        player.email = email || player.email;
+        player.date_of_birth = date_of_birth ? new Date(date_of_birth) : player.date_of_birth;
+        player.first_name = first_name || player.first_name;
+        player.last_name = last_name || player.last_name;
 
         await player.save();
         res.send('Player updated successfully');
@@ -81,7 +95,6 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
     }
 });
 
-// Delete a player by ID
 router.delete('/:id', authMiddleware, upload.none(), async (req, res) => {
     const token = req.headers.authorization.split(' ')[1];
 
