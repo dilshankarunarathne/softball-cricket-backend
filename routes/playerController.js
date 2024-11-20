@@ -13,6 +13,9 @@ router.post('/', authMiddleware, upload.none(), async (req, res) => {
 
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
+
+        console.log(decoded);
+
         if (decoded.user_type !== 'admin') {
             return res.status(403).send('Only admins can create players');
         }
