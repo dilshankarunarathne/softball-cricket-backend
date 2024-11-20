@@ -88,10 +88,16 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
 
         // calculate match score/wickets
 
-        // find the batting team
-        
-        const battingTeam = match.bat_first;
-        const battingTeamId = battingTeam === 'team1' ? match.team1 : match.team2;
+        // find the batting team, if sides are switched, batting team will be different
+        if (match.halftime === 'Yes') {
+            console.log('halftime is yes');
+            battingTeam = match.bat_first === 'team1' ? match.team2 : match.team1;
+        } else {
+            console.log('halftime is no');
+            battingTeam = match.bat_first;
+        }
+        console.log('batting team: ', battingTeam);
+        const battingTeamId = battingTeam;
 
         // update the number of overs played by the team
         if (battingTeamId.toString() === match.team1.toString()) {
