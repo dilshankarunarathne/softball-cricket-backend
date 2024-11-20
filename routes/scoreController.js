@@ -97,6 +97,17 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
         const battingTeam = match.bat_first;
         const battingTeamId = battingTeam === 'team1' ? match.team1 : match.team2;
 
+        // update the number of overs played by the team
+        if (battingTeamId.toString() === match.team1.toString()) {
+            console.log('team1 is batting');
+            match.team1_overs_played += 1;
+        } else if (battingTeamId.toString() === match.team2.toString()) {
+            console.log('team2 is batting');
+            match.team2_overs_played += 1;
+        }
+        console.log('team1 bat overs: ', match.team1_overs_played);
+        console.log('team2 bat overs: ', match.team2_overs_played);
+
         if (ball.result === 'wicket') {
             // mark wicket of batsman, batting team wicket count
             // check the team of batting and update the wickets
