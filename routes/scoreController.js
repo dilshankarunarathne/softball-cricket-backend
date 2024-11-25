@@ -44,6 +44,15 @@ router.post('/create', authMiddleware, upload.none(), async (req, res) => {
         });
 
         await score.save();
+
+        // Update match entity
+        const match = await Match.findById(match_id);
+        if (match) {
+            match.toss_winner = coin_toss_winner;
+            match.bat_first = bat_first_team;
+            await match.save();
+        }
+
         console.log('Match-scoring entity created successfully'); // Add this line
         res.status(201).send('Match-scoring entity created successfully');
     } catch (error) {
