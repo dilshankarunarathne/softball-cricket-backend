@@ -65,6 +65,33 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
     }
 });
 
+router.put('/:id/add-point', authMiddleware, upload.none(), async (req, res) => {
+    const token = req.headers.authorization.split(' ')[1];
+    console.log('winning team marking...');
+
+    try {
+        const decoded = jwt.verify(token, process.env.SECRET_KEY);
+        if (decoded.user_type !== 'admin' && decoded.user_type !== 'temp-admin') {
+            console.log('user unauthorized');
+            return res.status(403).send('Only admins can update points');
+        }
+
+        const team = await Team.findById(req.params.id);
+        if (!team) {
+            console.log('team not found: ', req.params.id);
+            return res.status(404).send('Team not found');
+        }
+
+        team.points += 1;
+        await team.save();
+
+        res.send('Team points updated successfully');
+    } catch (error) {
+        console.log(error);
+        res.status(500).send('Internal server error');
+    }
+});
+
 router.delete('/:id', authMiddleware, upload.none(), async (req, res) => {
     const token = req.headers.authorization.split(' ')[1];
 
