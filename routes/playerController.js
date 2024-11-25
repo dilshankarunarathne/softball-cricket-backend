@@ -96,6 +96,8 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
     const { name, team, runs_scored, wickets_taken, overs_bowled, batting_style, bowling_style, phone_number, email, date_of_birth, first_name, last_name } = req.body;
     const token = req.headers.authorization.split(' ')[1];
 
+    console.log("update player called : ", req.body);
+
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
         if (decoded.user_type !== 'admin') {
@@ -121,7 +123,7 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
         player.last_name = last_name || player.last_name;
 
         await player.save();
-        res.send('Player updated successfully');
+        res.send(player);
     } catch (error) {
         console.log(error);
         res.status(500).send('Internal server error');

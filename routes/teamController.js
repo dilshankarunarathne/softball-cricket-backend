@@ -43,9 +43,11 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
     const { name } = req.body;
     const token = req.headers.authorization.split(' ')[1];
 
+    console.log('edit team called...');
+
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
-        if (decoded.user_type !== 'admin') {
+        if (decoded.user_type !== 'admin' || decoded.user_type !== 'temp-admin') {
             return res.status(403).send('Only admins can update teams');
         }
 
