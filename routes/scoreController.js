@@ -387,18 +387,18 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
 
 // Endpoint to fetch the current score for a match
 router.get('/current/:match_id', authMiddleware, async (req, res) => {
-    console.log('GET /current/:match_id called'); // Add this line
+    console.log('GET score/current/:match_id called'); 
     const { match_id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(match_id)) {
-        console.log('Invalid match_id'); // Add this line
+        console.log('Invalid match_id'); 
         return res.status(400).send('Invalid match_id');
     }
 
     try {
         const score = await Score.findOne({ match_id });
         if (!score) {
-            console.log('Match-scoring entity not found'); // Add this line
+            console.log('Match-scoring entity not found'); 
             return res.status(404).send('Match-scoring entity not found');
         }
 
@@ -422,6 +422,8 @@ router.get('/current/:match_id', authMiddleware, async (req, res) => {
         };
 
         console.log('Current score fetched successfully'); 
+
+        console.log('\n', response, '\n');
 
         res.status(200).json(response);
     } catch (error) {

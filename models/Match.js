@@ -39,7 +39,7 @@ MatchSchema.statics.updateStatuses = async function() {
   matches.forEach(async (match) => {
     const matchDate = new Date(match.date).toDateString();
 
-    if (currentDate === matchDate && match.status == 'ended') {
+    if (currentDate === matchDate && match.status !== 'ended') {
       match.status = 'live';
     } else if (new Date() < new Date(match.date)) {
       match.status = 'ended';
