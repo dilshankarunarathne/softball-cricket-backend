@@ -40,6 +40,7 @@ router.get('/profile', async (req, res) => {
 });
 
 router.put('/profile', upload.none(), async (req, res) => {
+  console.log('profile update requested');
   const token = req.headers.authorization.split(' ')[1];
   try {
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
