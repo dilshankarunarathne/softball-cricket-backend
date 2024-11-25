@@ -13,7 +13,7 @@ const Team = require('../models/Team');
 // Endpoint to create a match-scoring entity
 router.post('/create', authMiddleware, upload.none(), async (req, res) => {
     console.log('POST /create called'); // Add this line
-    const { match_id, balls_per_over } = req.body;
+    const { match_id, balls_per_over, coin_toss_winner, bat_first_team } = req.body;
     const token = req.headers.authorization.split(' ')[1];
 
     if (!mongoose.Types.ObjectId.isValid(match_id)) {
@@ -119,7 +119,7 @@ router.post('/add-over', authMiddleware, upload.none(), async (req, res) => {
         // find the batting team, if sides are switched, batting team will be different
         if (match.halftime === 'Yes') {
             console.log('halftime is yes');
-            battingTeam = match.bat_first === 'team1' ? match.team2 : match.team1;
+            battingTeam = match.bat_first === match.team1 ? match.team2 : match.team1;
         } else {
             console.log('halftime is no');
             battingTeam = match.bat_first;
