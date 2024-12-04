@@ -47,7 +47,9 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
 
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
-        if (decoded.user_type !== 'admin' || decoded.user_type !== 'temp-admin') {
+        console.log("--- decoded user: ", decoded);
+        if (decoded.user_type === 'user') {
+            console.log("not an admin, 403!");
             return res.status(403).send('Only admins can update teams');
         }
 

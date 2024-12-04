@@ -100,6 +100,7 @@ router.put('/:id', authMiddleware, upload.none(), async (req, res) => {
 
     try {
         const decoded = jwt.verify(token, process.env.SECRET_KEY);
+        // console.log("--- decoded user: ", decoded);
         if (decoded.user_type !== 'admin') {
             return res.status(403).send('Only admins can update players');
         }
