@@ -49,6 +49,10 @@ router.put('/profile', upload.none(), async (req, res) => {
     user.lastName = req.body.lastName || user.lastName;
     user.email = req.body.email || user.email;
     user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
+
+    // for logging in with email
+    user.username = req.body.email || user.username;
+
     await user.save();
     res.send('account updated successfully');
   } catch (error) {
