@@ -12,6 +12,8 @@ router.post('/change-user-type', authMiddleware, upload.none(), async (req, res)
   const { username, new_type } = req.body;
   const token = req.headers.authorization.split(' ')[1];
 
+  console.log("change user type request... ", username, " - ", new_type);
+
   try {
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
     if (decoded.user_type !== 'admin') {
@@ -26,6 +28,9 @@ router.post('/change-user-type', authMiddleware, upload.none(), async (req, res)
 
     user.user_type = new_type;
     await user.save();
+
+    // Delete TARequest entity from the database
+    await TARequest.deleteMany({ user_id: user._id });
 
     res.send('User type updated successfully');
   } catch (error) {
